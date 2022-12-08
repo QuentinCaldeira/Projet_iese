@@ -104,6 +104,17 @@ int who_am_i_sensors(){
   }
 }
 
+int reset_acc(){
+  uint8_t buf[2];                                                                                     //Buffer de 1 octet car on ne lit que une case mémoire
+	HAL_StatusTypeDef ret;                                                                              //Variable HAL permettant de voir l'état de la transmission I2C
+	buf[0] = CTRL_REG5_A;  
+  buf[1]=0x80;                                                                              //On affecte l'adresse de la case mémoire stockant WHOAMI pour l'accelero
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 2, HAL_MAX_DELAY);                              //On effectue la transmission sur l'accelero
+	if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+		printf("Error Tx\r\n");
+	}
+}
+
 
 /*---------------------------------------------------------------------------------*/
 /* USER CODE END 0 */
