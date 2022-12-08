@@ -52,6 +52,8 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 int who_am_i_sensors();
+int reset_acc();
+int config_acc();
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -71,38 +73,64 @@ int who_am_i_sensors(){
 	uint8_t buf[1];                                                                                     //Buffer de 1 octet car on ne lit que une case mémoire
 	HAL_StatusTypeDef ret;                                                                              //Variable HAL permettant de voir l'état de la transmission I2C
 	buf[0] = WHO_AM_I_A;                                                                                //On affecte l'adresse de la case mémoire stockant WHOAMI pour l'accelero
-	ret = HAL_I2C_Master_Receive(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                           //Sinon, on recupere la valeur dans la case memoire
-	if ( ret != HAL_OK ) {                                                                          //Si la réception s'est mal passée, on affiche une erreur
-	   printf("Error Rx\r\n");
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                              //On effectue la transmission sur l'accelero
+	if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+		printf("Error Tx\r\n");
 	}
 	else {
-		if ( buf[0]==0x33 ) {                                                                         //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
-	        printf("Detection de accelerometre \n\r");
+	    ret = HAL_I2C_Master_Receive(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                           //Sinon, on recupere la valeur dans la case memoire
+	    if ( ret != HAL_OK ) {                                                                          //Si la réception s'est mal passée, on affiche une erreur
+	      printf("Error Rx\r\n");
 	    }
-	 }
+	    else {
+	    	if ( buf[0]==0x33 ) {                                                                         //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
+	        printf("Detection de accelerometre \n\r");
+	    	}
+	    }
+  }
   buf[0] = WHO_AM_I_M;                                                                                //On affecte l'adresse de la case mémoire du WHOAMI pour le magneto
-  ret = HAL_I2C_Master_Receive(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);                             //Sinon, on recupere la valeur dans la case memoire
-  if ( ret != HAL_OK ) {                                                                            //Si la réception s'est mal passée, on affiche une erreur
-	  printf("Error Rx\r\n");
+  ret = HAL_I2C_Master_Transmit(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);                              //On effectue la transmission sur le magneto
+  if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+	  printf("Error Tx\r\n");
   }
   else {
-   	if ( buf[0]==0x40 ) {                                                                           //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
-   		printf("Detection de magneto \n\r");
-   	}
-   }
+  	ret = HAL_I2C_Master_Receive(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);                             //Sinon, on recupere la valeur dans la case memoire
+  	if ( ret != HAL_OK ) {                                                                            //Si la réception s'est mal passée, on affiche une erreur
+  	  printf("Error Rx\r\n");
+  	}
+    else {
+    	if ( buf[0]==0x40 ) {                                                                           //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
+    		printf("Detection de magneto \n\r");
+    	}
+    }
   }
+}
 
 int reset_acc(){
-  uint8_t buf[2];                                                                                     //Buffer de 1 octet car on ne lit que une case mémoire
-	HAL_StatusTypeDef ret;                                                                              //Variable HAL permettant de voir l'état de la transmission I2C
+	uint8_t buf[2];
+	HAL_StatusTypeDef ret;
 	buf[0] = CTRL_REG5_A;  
- 	buf[1]=0x80;                                                                              //On affecte l'adresse de la case mémoire stockant WHOAMI pour l'accelero
-	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 2, HAL_MAX_DELAY);                              //On effectue la transmission sur l'accelero
-	if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+ 	buf[1]=0x80;  //Data de reset
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 2, HAL_MAX_DELAY);
+	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
 	}
 }
 
+int config_acc(){
+	uint8_t buf[8] ;
+	buf[0]=CTRL_REG1_A;
+	buf[1]=0x27;//Valeur a mettre dans ctrm_reg_1
+	buf[2]=0x21;//Valeur a mettre dans ctrm_reg_2
+	buf[2]=0x22;//Valeur a mettre dans ctrm_reg_3
+	buf[3]=0x23;//Valeur a mettre dans ctrm_reg_4
+	buf[4]=0x00;//Valeur a mettre dans ctrm_reg_5
+	buf[5]=0x25;//Valeur a mettre dans ctrm_reg_6
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 5, HAL_MAX_DELAY);
+	if ( ret != HAL_OK ) {
+		printf("Error Tx\r\n");
+	}
+}
 
 /*---------------------------------------------------------------------------------*/
 /* USER CODE END 0 */
@@ -148,7 +176,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1){
 	  who_am_i_sensors();
-	  //reset_acc();
+	  reset_acc();
+	  config_acc();
   }
 }
     /* USER CODE END WHILE */
