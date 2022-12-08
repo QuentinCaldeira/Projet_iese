@@ -1,21 +1,7 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2022 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+/*VILLETTE Lou-Anne & CALDEIRA Quentin*/
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
@@ -24,6 +10,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
 
 /* USER CODE END Includes */
 
@@ -34,6 +21,18 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define ACC_ADR 		0x32 //Adresse i2c de l'acceloremetre
+#define MAG_ADR 		0x3C //Adresse i2c du magnetometre
+#define WHO_AM_I_A 		0x0F
+#define WHO_AM_I_M		0x4F
+
+
+#define CTRL_REG1_A 	0x20
+#define CTRL_REG5_A 	0x24
+#define OUT_X_L_A		0x28
+
+#define CFG_REG_A_M 	0x60
+#define	OUTX_L_REG_M	0x68
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,18 +43,69 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+ char acc_data_w[12];
+ char acc_data_r[12];
+ char mag_data_w[12];
+ char mag_data_r[12];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+int who_am_i_sensors();
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/*------------Fonction permettant de relier le printf et l'uart---------------*/
+int __io_putchar(int ch) {
+	uint8_t c = ch & 0x00FF;
+	HAL_UART_Transmit(&huart2, &c, 1, 10);
+	return ch;
+}
+/*----------------------------------------------------------------------------*/
 
+/*---Fonction permettant d'attester la présence du magneto et de l'accelero---*/
+int who_am_i_sensors(){
+	uint8_t buf[1];                                                                                     //Buffer de 1 octet car on ne lit que une case mémoire
+	HAL_StatusTypeDef ret;                                                                              //Variable HAL permettant de voir l'état de la transmission I2C
+	buf[0] = WHO_AM_I_A;                                                                                //On affecte l'adresse de la case mémoire stockant WHOAMI pour l'accelero
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                              //On effectue la transmission sur l'accelero
+	if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+		printf("Error Tx\r\n");
+	}
+	else {
+	    ret = HAL_I2C_Master_Receive(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                           //Sinon, on recupere la valeur dans la case memoire
+	    if ( ret != HAL_OK ) {                                                                          //Si la réception s'est mal passée, on affiche une erreur
+	      printf("Error Rx\r\n");
+	    }
+	    else {
+	    	if ( buf[0]==0x33 ) {                                                                         //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
+	        printf("Detection de accelerometre \n\r");
+	    	}
+	    }
+  }
+  buf[0] = WHO_AM_I_M;                                                                                //On affecte l'adresse de la case mémoire du WHOAMI pour le magneto
+  ret = HAL_I2C_Master_Transmit(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);                              //On effectue la transmission sur le magneto
+  if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+	  printf("Error Tx\r\n");
+  }
+  else {
+  	ret = HAL_I2C_Master_Receive(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);                             //Sinon, on recupere la valeur dans la case memoire
+  	if ( ret != HAL_OK ) {                                                                            //Si la réception s'est mal passée, on affiche une erreur
+  	  printf("Error Rx\r\n");
+  	}
+    else {
+    	if ( buf[0]==0x40 ) {                                                                           //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
+    		printf("Detection de magneto \n\r");
+    	}
+    }
+  }
+}
+
+
+/*---------------------------------------------------------------------------------*/
 /* USER CODE END 0 */
 
 /**
@@ -82,6 +132,8 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
 
+
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -90,18 +142,20 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+  while (1){
+	  who_am_i_sensors();
+  }
+}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+
   /* USER CODE END 3 */
-}
 
 /**
   * @brief System Clock Configuration
@@ -165,6 +219,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+	  printf("error i2c");
   }
   /* USER CODE END Error_Handler_Debug */
 }
