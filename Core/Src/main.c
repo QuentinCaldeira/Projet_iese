@@ -118,19 +118,38 @@ int reset_acc(){
 }
 
 int config_acc(){
+	HAL_StatusTypeDef ret;
 	uint8_t buf[8] ;
 	buf[0]=CTRL_REG1_A;
 	buf[1]=0x27;//Valeur a mettre dans ctrm_reg_1
 	buf[2]=0x21;//Valeur a mettre dans ctrm_reg_2
-	buf[2]=0x22;//Valeur a mettre dans ctrm_reg_3
-	buf[3]=0x23;//Valeur a mettre dans ctrm_reg_4
-	buf[4]=0x00;//Valeur a mettre dans ctrm_reg_5
-	buf[5]=0x25;//Valeur a mettre dans ctrm_reg_6
-	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 5, HAL_MAX_DELAY);
+	buf[3]=0x22;//Valeur a mettre dans ctrm_reg_3
+	buf[4]=0x23;//Valeur a mettre dans ctrm_reg_4
+	buf[5]=0x00;//Valeur a mettre dans ctrm_reg_5
+	buf[6]=0x25;//Valeur a mettre dans ctrm_reg_6
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 7, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
 	}
+	  buf[0] = 0x20;                                                                                //On affecte l'adresse de la case mémoire du WHOAMI pour le magneto
+	  ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                              //On effectue la transmission sur le magneto
+	  if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+		  printf("Error Tx\r\n");
+	  }
+	  else {
+	  	ret = HAL_I2C_Master_Receive(&hi2c1, ACC_ADR, buf, 7, HAL_MAX_DELAY);                             //Sinon, on recupere la valeur dans la case memoire
+	  	if ( ret != HAL_OK ) {                                                                            //Si la réception s'est mal passée, on affiche une erreur
+	  	  printf("Error Rx\r\n");
+	  	}
+	    else {
+	    	if ( buf[0]==0x21 ) {                                                                           //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
+	    		printf("OKOKOKOKO \n\r");
+	    	}
+	    }
+	  }
 }
+
+
 
 /*---------------------------------------------------------------------------------*/
 /* USER CODE END 0 */
@@ -149,7 +168,8 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
+  uint16_t reg, i;
+  int length=1, a;
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -178,6 +198,49 @@ int main(void)
 	  who_am_i_sensors();
 	  reset_acc();
 	  config_acc();
+
+	  	 //WRITE
+	  I2C1 -> CR1 &= ~I2C_CR1_POS;
+	  I2C1 -> CR1 |= I2C_CR1_START;
+	  while(!(I2C1 -> SR1 & I2C_SR1_SB)){}
+	  I2C1 -> DR = (0x32) | 0x00;
+	  while(!(I2C1 -> SR1 & I2C_SR1_ADDR)){}
+	  reg = 0x00;
+	  reg = I2C1 -> SR1;
+	  reg = I2C1 -> SR2;
+	  while(!(I2C1 -> SR1 & I2C_SR1_TXE)){}
+	  for(int i = 0 ; i < length; i++)
+	  {
+	  I2C1 -> DR = WHO_AM_I_A;
+	  while(!(I2C1 -> SR1 & I2C_SR1_TXE)){}
+	  while(!(I2C1 -> SR1 & I2C_SR1_BTF)){}
+	  reg = 0x00;
+	  reg = I2C1 -> SR1;
+	  reg = I2C1 -> SR2;
+	  }
+	  I2C1 -> CR1 |= I2C_CR1_STOP;
+	  reg = I2C1 -> SR1;
+	  reg = I2C1 -> SR2;
+
+	  //READ
+	  I2C1 -> CR1 &= ~I2C_CR1_POS;
+	  I2C1 -> CR1 |= I2C_CR1_ACK;
+	  I2C1 -> CR1 |= I2C_CR1_START;
+	  while(!(I2C1 -> SR1 & I2C_SR1_SB)){}
+	  I2C1 -> DR = (0x32) | 0x01;
+	  while(!(I2C1 -> SR1 & I2C_SR1_ADDR)){}
+	  reg = 0x00; reg = I2C1->SR1;
+	  reg = I2C1 -> SR2;
+	  for( i =0; i < (length - 1); i++)
+	  {
+	   while(!(I2C1 -> SR1 & I2C_SR1_RXNE)){}
+	  a = I2C1 -> DR;
+	  I2C1 -> CR1 |= I2C_CR1_ACK;
+	  }
+	  i++;
+	  a = I2C1 -> DR;
+	  I2C1 -> CR1 &= ~I2C_CR1_ACK;
+	  I2C1 -> CR1 |= I2C_CR1_STOP;
   }
 }
     /* USER CODE END WHILE */
