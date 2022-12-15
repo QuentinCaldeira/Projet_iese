@@ -60,8 +60,8 @@ all: main-build
 main-build: Projet_iese.elf secondary-outputs
 
 # Tool invocations
-Projet_iese.elf Projet_iese.map: $(OBJS) $(USER_OBJS) C:\Users\quent\Documents\STM32IDE\Projet_iese\STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Projet_iese.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\quent\Documents\STM32IDE\Projet_iese\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Projet_iese.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Projet_iese.elf Projet_iese.map: $(OBJS) $(USER_OBJS) C:\Users\quent\git\Projet_iese\STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Projet_iese.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\quent\git\Projet_iese\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Projet_iese.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
