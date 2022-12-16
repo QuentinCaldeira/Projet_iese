@@ -159,23 +159,23 @@ int reset_mag(){
 
 int config_mag(){
 	HAL_StatusTypeDef ret;
-	uint8_t buf[3] ;
-	uint8_t res[3] ;
+	uint8_t buf[6] ;
+	uint8_t res[6] ;
 	buf[0]=0x80;//Valeur a mettre dans ctrm_reg_a
 	buf[1]=0x03;//Valeur a mettre dans ctrm_reg_b
 	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_c
-	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CTRL_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
+	ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
 	}
-	ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, CTRL_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
+	ret = HAL_I2C_Mem_Read(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
 	uint8_t i=0;
 	for(i=0;i<3;i++){
 		if(buf[i]==res[i]){
-			printf("0x%02x mis dans le registre CTRL_REG_%d_M \n\r", buf[i], i+1);
+			printf("0x%02x mis dans le registre CTRL_REG_%d_A \n\r", buf[i], i+1);
 		}
 		else{
-			printf("Valeur mise dans le registre CTRL_REG_%d_M erronee \n\r",i+1);
+			printf("Valeur mise dans le registre CTRL_REG_%d_A erronee \n\r",i+1);
 		}
 	}
 }
