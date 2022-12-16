@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ../Core/Src/main.c:68:5:__io_putchar	24	static
 ../Core/Src/main.c:76:5:who_am_i_sensors	24	static
 ../Core/Src/main.c:113:5:reset_acc	24	static
@@ -7,3 +8,12 @@
 ../Core/Src/main.c:192:5:main	8	static
 ../Core/Src/main.c:244:6:SystemClock_Config	88	static
 ../Core/Src/main.c:295:6:Error_Handler	8	static,ignoring_inline_asm
+=======
+../Core/Src/main.c:66:5:__io_putchar	24	static
+../Core/Src/main.c:74:5:who_am_i_sensors	24	static
+../Core/Src/main.c:111:5:reset_acc	24	static
+../Core/Src/main.c:122:5:config_acc	40	static
+../Core/Src/main.c:157:5:main	8	static
+../Core/Src/main.c:207:6:SystemClock_Config	88	static
+../Core/Src/main.c:258:6:Error_Handler	8	static,ignoring_inline_asm
+>>>>>>> bf9054d847ea0499ebc79175abe7ba23dcadd48b
