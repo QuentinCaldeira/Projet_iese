@@ -33,6 +33,10 @@
 
 #define CFG_REG_A_M 	0x60
 #define	OUTX_L_REG_M	0x68
+
+#define SUB_INCREMENT   0x80//Masque pour autoriser l'incrément des sous registres
+
+#define CTRL_REG_A_M 	0x60
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,6 +56,8 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 int who_am_i_sensors();
+int reset_acc();
+int config_acc();
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -104,6 +110,77 @@ int who_am_i_sensors(){
   }
 }
 
+int reset_acc(){
+	uint8_t buf[2];
+	HAL_StatusTypeDef ret;
+	buf[0] = CTRL_REG5_A;  
+ 	buf[1]=0x80;  //Data de reset
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 2, HAL_MAX_DELAY);
+	if ( ret != HAL_OK ) {
+		printf("Error Tx\r\n");
+	}
+}
+
+int config_acc(){
+	HAL_StatusTypeDef ret;
+	uint8_t buf[6] ;
+	uint8_t res[6] ;
+	buf[0]=0x27;//Valeur a mettre dans ctrm_reg_1
+	buf[1]=0x21;//Valeur a mettre dans ctrm_reg_2
+	buf[2]=0x22;//Valeur a mettre dans ctrm_reg_3
+	buf[3]=0x23;//Valeur a mettre dans ctrm_reg_4
+	buf[4]=0x00;//Valeur a mettre dans ctrm_reg_5
+	buf[5]=0x25;//Valeur a mettre dans ctrm_reg_6
+	ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);
+	if ( ret != HAL_OK ) {
+		printf("Error Tx\r\n");
+	}
+	ret = HAL_I2C_Mem_Read(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 6, HAL_MAX_DELAY);
+	uint8_t i=0;
+	for(i=0;i<6;i++){
+		if(buf[i]==res[i]){
+			printf("0x%02x mis dans le registre CTRL_REG_%d_A \n\r", buf[i], i+1);
+		}
+		else{
+			printf("Valeur mise dans le registre CTRL_REG_%d_A erronee \n\r",i+1);
+		}
+	}
+}
+
+int reset_mag(){
+	uint8_t buf[1];
+	HAL_StatusTypeDef ret;
+	buf[0] = 0x40;//1 sur reboot
+	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CTRL_REG_A_M, I2C_MEMADD_SIZE_8BIT, buf, 1, HAL_MAX_DELAY);
+	if ( ret != HAL_OK ) {
+		printf("Error Tx\r\n");
+	}
+}
+
+int config_mag(){
+	HAL_StatusTypeDef ret;
+	uint8_t buf[3] ;
+	uint8_t res[3] ;
+	buf[0]=0x80;//Valeur a mettre dans ctrm_reg_a
+	buf[1]=0x03;//Valeur a mettre dans ctrm_reg_b
+	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_c
+	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CTRL_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
+	if ( ret != HAL_OK ) {
+		printf("Error Tx\r\n");
+	}
+	ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, CTRL_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
+	uint8_t i=0;
+	for(i=0;i<3;i++){
+		if(buf[i]==res[i]){
+			printf("0x%02x mis dans le registre CTRL_REG_%d_M \n\r", buf[i], i+1);
+		}
+		else{
+			printf("Valeur mise dans le registre CTRL_REG_%d_M erronee \n\r",i+1);
+		}
+	}
+}
+
+
 
 /*---------------------------------------------------------------------------------*/
 /* USER CODE END 0 */
@@ -122,7 +199,6 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -149,6 +225,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1){
 	  who_am_i_sensors();
+	  reset_acc();
+	  reset_mag();
+	  config_acc();
+	  config_mag();
   }
 }
     /* USER CODE END WHILE */
