@@ -1,7 +1,6 @@
 /* USER CODE BEGIN Header */
 /*VILLETTE Lou-Anne & CALDEIRA Quentin*/
 /* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
@@ -47,17 +46,16 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
- char acc_data_w[12];
- char acc_data_r[12];
- char mag_data_w[12];
- char mag_data_r[12];
+struct data {
+  int16_t X;
+  int16_t Y;
+  int16_t Z;
+};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-int who_am_i_sensors();
-int reset_acc();
-int config_acc();
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -126,11 +124,11 @@ int config_acc(){
 	uint8_t buf[6] ;
 	uint8_t res[6] ;
 	buf[0]=0x27;//Valeur a mettre dans ctrm_reg_1
-	buf[1]=0x21;//Valeur a mettre dans ctrm_reg_2
-	buf[2]=0x22;//Valeur a mettre dans ctrm_reg_3
-	buf[3]=0x23;//Valeur a mettre dans ctrm_reg_4
+	buf[1]=0x00;//Valeur a mettre dans ctrm_reg_2
+	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_3
+	buf[3]=0x00;//Valeur a mettre dans ctrm_reg_4
 	buf[4]=0x00;//Valeur a mettre dans ctrm_reg_5
-	buf[5]=0x25;//Valeur a mettre dans ctrm_reg_6
+	buf[5]=0x00;//Valeur a mettre dans ctrm_reg_6
 	ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
@@ -150,7 +148,7 @@ int config_acc(){
 int reset_mag(){
 	uint8_t buf[1];
 	HAL_StatusTypeDef ret;
-	buf[0] = 0x40;//1 sur reboot
+	buf[0] = 0x60;//1 sur reboot
 	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CTRL_REG_A_M, I2C_MEMADD_SIZE_8BIT, buf, 1, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
@@ -161,14 +159,14 @@ int config_mag(){
 	HAL_StatusTypeDef ret;
 	uint8_t buf[6] ;
 	uint8_t res[6] ;
-	buf[0]=0x80;//Valeur a mettre dans ctrm_reg_a
-	buf[1]=0x03;//Valeur a mettre dans ctrm_reg_b
+	buf[0]=0x0C;//Valeur a mettre dans ctrm_reg_a
+	buf[1]=0x02;//Valeur a mettre dans ctrm_reg_b
 	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_c
-	ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
+	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
 	}
-	ret = HAL_I2C_Mem_Read(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
+	ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
 	uint8_t i=0;
 	for(i=0;i<3;i++){
 		if(buf[i]==res[i]){
@@ -178,6 +176,37 @@ int config_mag(){
 			printf("Valeur mise dans le registre CTRL_REG_%d_A erronee \n\r",i+1);
 		}
 	}
+}
+
+void get_data(struct data* acc, struct data* mag){
+		HAL_StatusTypeDef ret;
+		uint8_t buf[6] ;
+		//int16_t acc.X, acc.Y, acc.Z;
+		//int16_t magX, magY, magZ;
+		ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, OUT_X_L_A, I2C_MEMADD_SIZE_8BIT, 0, 0, HAL_MAX_DELAY);
+		if ( ret != HAL_OK ) {
+			printf("Error Tx\r\n");
+		}
+		ret = HAL_I2C_Mem_Read(&hi2c1, ACC_ADR, OUT_X_L_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);
+		acc->X=(buf[1]<<8)|(buf[0]);
+		acc->Y=(buf[3]<<8)|(buf[2]);
+		acc->Z=(buf[5]<<8)|(buf[4]);
+
+		ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, OUTX_L_REG_M, I2C_MEMADD_SIZE_8BIT, 0, 0, HAL_MAX_DELAY);
+		if ( ret != HAL_OK ) {
+			printf("Error Tx\r\n");
+		}
+		ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, OUTX_L_REG_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);
+		mag->X=(buf[1]<<8)|(buf[0]);
+		mag->Y=(buf[3]<<8)|(buf[2]);
+		mag->Z=(buf[5]<<8)|(buf[4]);
+
+		/*printf("magX=%d  ",magX);
+		printf("magY=%d  ",magY);
+		printf("magZ=%d\n\r",magZ);
+		printf("accX=%d  ",accX);
+		printf("accY=%d  ",accY);
+		printf("accZ=%d\n\r",accZ);*/
 }
 
 
@@ -199,6 +228,7 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
+
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -218,17 +248,22 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+  who_am_i_sensors();
+  reset_acc();
+  config_acc();
+  reset_mag();
+  config_mag();
+  struct data acc;
+  struct data mag;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1){
-	  who_am_i_sensors();
-	  reset_acc();
-	  reset_mag();
-	  config_acc();
-	  config_mag();
+	  get_data(&acc,&mag);
+	  printf("accX=%d\t accY=%d\t accZ=%d\t |\t magX=%d\t magY=%d\t magZ=%d",acc.X,acc.Y,acc.Z,mag.X,mag.Y,mag.Z);
+	  printf("\n\r");
   }
 }
     /* USER CODE END WHILE */
