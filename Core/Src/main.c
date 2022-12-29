@@ -6,6 +6,7 @@
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
+#include <math.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -209,6 +210,9 @@ void get_data(struct data* acc, struct data* mag){
 		printf("accZ=%d\n\r",accZ);*/
 }
 
+void convert_acc(struct data* acc){
+	acc->X=32767/acc->X;
+}
 
 
 /*---------------------------------------------------------------------------------*/
@@ -262,8 +266,30 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1){
 	  get_data(&acc,&mag);
+	  //Tentative conversion en float
+	  float acc_Z=(float)acc.Z*2/32576;
+	  float acc_Y=(float)acc.Y*2/32576;
+	  float acc_X=(float)acc.X*2/32576;
+
+	  float mag_Z=mag.Z/1.5;
+	  float mag_Y=mag.Y/1.5;
+	  float mag_X=mag.X/1.5;
+
+	  //calcul angles
+	  float theta=atan(acc_Y/acc_X);
+	  float psi=atan(-acc_Z)/(sqrt(acc_Y*acc_Y+acc_X*acc_X));
+	  float delta=acos(sqrt((mag_Y*acc_Z-mag_Z*acc_Y)*(mag_Y*acc_Z-mag_Z*acc_Y)+(mag_Z*acc_X-mag_X*acc_Z)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X))/(sqrt(mag_X*mag_X+mag_Y*mag_Y+mag_Z*mag_Z)*sqrt(acc_X*acc_X+acc_Y*acc_Y+acc_Z*acc_Z)));
+
+
 	  printf("accX=%d\t accY=%d\t accZ=%d\t |\t magX=%d\t magY=%d\t magZ=%d",acc.X,acc.Y,acc.Z,mag.X,mag.Y,mag.Z);
+	  printf("\t|||||\t");
+	  printf("accX=%.2f\t accY=%.2f\t accZ=%.2f\t |\t magX=%.2f\t magY=%.2f\t magZ=%.2f",acc_X,acc_Y,acc_Z,mag_X,mag_Y,mag_Z);
+	  printf("\t|||\t");
+	  printf("theta=%.2f\t psi=%.2f",theta,psi);
 	  printf("\n\r");
+
+
+
   }
 }
     /* USER CODE END WHILE */
