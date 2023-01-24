@@ -267,17 +267,21 @@ int main(void)
   while (1){
 	  get_data(&acc,&mag);
 	  //Tentative conversion en float
-	  float acc_Z=(float)acc.Z*2/32576;
-	  float acc_Y=(float)acc.Y*2/32576;
-	  float acc_X=(float)acc.X*2/32576;
+	  float acc_Z=(float)acc.Z*4/65535;
+	  float acc_Y=(float)acc.Y*4/65535;
+	  float acc_X=(float)acc.X*4/65535;
 
-	  float mag_Z=mag.Z/1.5;
-	  float mag_Y=mag.Y/1.5;
-	  float mag_X=mag.X/1.5;
+	  float mag_Z=(float)mag.Z*100000/65535;
+	  float mag_Y=(float)mag.Y*100000/65535;
+	  float mag_X=(float)mag.X*100000/65535;//Conversion en Gauss
+
+	  mag_Z=mag_Z/1000;
+	  mag_X=mag_X/1000;
+	  mag_Y=mag_Y/1000;//Repassage en mGauss ?
 
 	  //calcul angles
 	  float theta=atan(acc_Y/acc_X);
-	  float psi=atan(-acc_Z)/(sqrt(acc_Y*acc_Y+acc_X*acc_X));
+	  float psi=atan((-acc_Z)/(sqrt(acc_Y*acc_Y+acc_X*acc_X)));
 	  float delta=acos(sqrt((mag_Y*acc_Z-mag_Z*acc_Y)*(mag_Y*acc_Z-mag_Z*acc_Y)+(mag_Z*acc_X-mag_X*acc_Z)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X))/(sqrt(mag_X*mag_X+mag_Y*mag_Y+mag_Z*mag_Z)*sqrt(acc_X*acc_X+acc_Y*acc_Y+acc_Z*acc_Z)));
 
 
