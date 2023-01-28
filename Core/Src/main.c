@@ -273,11 +273,12 @@ int main(void)
 
 	  float mag_Z=(float)mag.Z*100000/65535;
 	  float mag_Y=(float)mag.Y*100000/65535;
-	  float mag_X=(float)mag.X*100000/65535;//Conversion en Gauss
+	  float mag_X=(float)mag.X*100000/65535;//Conversion en mGauss
 
-	  mag_Z=mag_Z/1000;
-	  mag_X=mag_X/1000;
-	  mag_Y=mag_Y/1000;//Repassage en mGauss ?
+	  mag_X=mag_X-30.64;
+	  mag_Y=mag_Y+3.87;
+	  mag_Z=mag_Z+44.69;
+
 
 	  //calcul angles
 	  float theta=atan(acc_Y/acc_X);
@@ -289,7 +290,7 @@ int main(void)
 	  printf("\t|||||\t");
 	  printf("accX=%.2f\t accY=%.2f\t accZ=%.2f\t |\t magX=%.2f\t magY=%.2f\t magZ=%.2f",acc_X,acc_Y,acc_Z,mag_X,mag_Y,mag_Z);
 	  printf("\t|||\t");
-	  printf("theta=%.2f\t psi=%.2f",theta,psi);
+	  printf("theta=%.2f\t psi=%.2f\t delta=%.2f",theta,psi,delta);
 	  printf("\n\r");
 
 
