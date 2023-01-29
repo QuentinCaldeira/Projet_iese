@@ -274,7 +274,7 @@ int main(void)
 	  float mag_Z=(float)mag.Z*100000/65535;
 	  float mag_Y=(float)mag.Y*100000/65535;
 	  float mag_X=(float)mag.X*100000/65535;//Conversion en mGauss
-
+	//ADJUST OFFSET
 	  mag_X=mag_X-30.64;
 	  mag_Y=mag_Y+3.87;
 	  mag_Z=mag_Z+44.69;
