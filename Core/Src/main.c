@@ -37,6 +37,14 @@
 #define SUB_INCREMENT   0x80//Masque pour autoriser l'incrément des sous registres
 
 #define CTRL_REG_A_M 	0x60
+
+#ifdef __GNUC__
+#define GETCHAR_PROTOTYPE int __io_getchar(void)
+#else
+#define GETCHAR_PROTOTYPE int fgetc(FILE *f)
+#endif
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,10 +55,23 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-struct data {
+struct data_meas {
   int16_t X;
   int16_t Y;
   int16_t Z;
+};
+
+struct data_real {
+  float X;
+  float Y;
+  float Z;
+};
+
+struct angle {
+  float theta;
+  float psi;
+  float phi;
+  float delta;
 };
 
 /* USER CODE END PV */
@@ -68,6 +89,20 @@ int __io_putchar(int ch) {
 	uint8_t c = ch & 0x00FF;
 	HAL_UART_Transmit(&huart2, &c, 1, 10);
 	return ch;
+}
+
+GETCHAR_PROTOTYPE
+{
+  uint8_t ch = 0;
+
+  /* Clear the Overrun flag just before receiving the first character */
+  __HAL_UART_CLEAR_OREFLAG(&huart2);
+
+  /* Wait for reception of a character on the USART RX line and echo this
+   * character on console */
+  HAL_UART_Receive(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
 }
 /*----------------------------------------------------------------------------*/
 
@@ -161,7 +196,7 @@ int config_mag(){
 	HAL_StatusTypeDef ret;
 	uint8_t buf[3] ;															//Buffer de 3 car on va écrire sur 3 reg d'un coup
 	uint8_t res[3] ;															//Buffer permettant de vérifier si les valeurs ont bien été écrites
-	buf[0]=0x0C;//Valeur a mettre dans ctrm_reg_a
+	buf[0]=0x8C;//Valeur a mettre dans ctrm_reg_a
 	buf[1]=0x02;//Valeur a mettre dans ctrm_reg_b
 	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_c
 	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
@@ -181,7 +216,7 @@ int config_mag(){
 	}
 }
 
-void get_data(struct data* acc, struct data* mag){
+void get_data(struct data_meas* acc, struct data_meas* mag){
 		HAL_StatusTypeDef ret;
 		uint8_t buf[6] ;
 		ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, OUT_X_L_A, I2C_MEMADD_SIZE_8BIT, 0, 0, HAL_MAX_DELAY);
@@ -201,6 +236,39 @@ void get_data(struct data* acc, struct data* mag){
 		mag->X=(buf[1]<<8)|(buf[0]);
 		mag->Y=(buf[3]<<8)|(buf[2]);
 		mag->Z=(buf[5]<<8)|(buf[4]);
+}
+
+void acc_calibration(struct data_meas* acc, struct data_real* real_acc){
+	real_acc->X=-6.025*pow(10,-5)*(acc->X+1152)+1.075*pow(10,-7)*(acc->Y-1055)+1.387*pow(10,-6)*(acc->Z-1504);
+	real_acc->Y=1.299*pow(10,-6)*(acc->X+1152)-6.14*pow(10,-5)*(acc->Y-1055)+8.793*pow(10,-8)*(acc->Z-1504);
+	real_acc->Z=-1.378*pow(10,-6)*(acc->X+1152)+4.689*pow(10,-7)*(acc->Y-1055)-6.001*pow(10,-5)*(acc->Z-1504);
+}
+
+void mag_calibration(struct data_meas* mag){
+	  mag->X=mag->X-46;
+	  mag->Y=mag->Y-88;
+	  mag->Z=mag->Z-12;
+}
+
+void calcul_angle(struct angle* angle, struct data_real* acc, struct data_meas* mag){
+	angle->theta=atan((acc->Y)/(acc->X));
+	angle->psi=atan((-acc->Z)/(sqrt(acc->Y*acc->Y+acc->X*acc->X)));
+	angle->delta=acos(sqrt(pow((mag->Y*acc->Z-mag->Z*acc->Y),2)+pow((mag->Z*acc->X-mag->X*acc->Z),2)+pow((mag->X*acc->Y-mag->Y*acc->X),2)+(mag->X*acc->Y-mag->Y*acc->Z))/(sqrt(mag->X*mag->X+mag->Y*mag->Y+mag->Z*mag->Z)*sqrt(acc->Z*acc->X+acc->Y*acc->Y+acc->Z*acc->Z)));
+	//Conversion en radians
+	//NOTE : 57.3 = (360)/(2*pi)
+	angle->theta=angle->theta*57.3;
+	if((acc->X<0.06))angle->theta=0;
+	angle->psi=angle->psi*57.3;
+	angle->delta=angle->delta*57.3;
+}
+void affich_meas(struct data_meas* acc,struct data_real* real_acc,struct data_meas* mag,struct angle* angle){
+	//Affichage des toutes les valeurs
+	printf("accX=%d\t accY=%d\t accZ=%d\t |\t magX=%d\t magY=%d\t magZ=%d",acc->X,acc->Y,acc->Z,mag->X,mag->Y,mag->Z);
+	printf("\t|||||\t");
+	printf("accX=%.2f\t accY=%.2f\t accZ=%.2f",real_acc->X,real_acc->Y,real_acc->Z);
+	printf("\t|||\t");
+	printf("theta=%.2f\t psi=%.2f\t delta=%.2f",angle->theta,angle->psi,angle->delta);
+	printf("\n\r");
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -246,8 +314,10 @@ int main(void)
   reset_mag();//Fonction qui permet de reset les registres de Acc
   config_mag();//Fonction qui permet de régler les registres de config de Mag
   //Définition des structures contenant les 3 axes
-  struct data acc;
-  struct data mag;
+  struct data_meas acc;
+  struct data_meas mag;
+  struct data_real real_acc;
+  struct angle angle;
 
   /* USER CODE END 2 */
 
@@ -255,42 +325,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1){
 	  get_data(&acc,&mag);
-	  //Conversion en float pour affichage
-	  //(VAL * FS) / Taille en bits
-	  float acc_Z=(float)acc.Z*4/65535;
-	  float acc_Y=(float)acc.Y*4/65535;
-	  float acc_X=(float)acc.X*4/65535;
-	  //Conversion en float pour affichage
-	  //(VAL * FS) / Taille en bits
-	  //100000 car +-50G soit +-50000mG
-	  float mag_Z=(float)mag.Z*100000/65535;
-	  float mag_Y=(float)mag.Y*100000/65535;
-	  float mag_X=(float)mag.X*100000/65535;
-	  //Compensation des offsets du magnetomètre après calcul du centre de gravité sur Excel
-	  mag_X=mag_X-30.64;
-	  mag_Y=mag_Y+3.87;
-	  mag_Z=mag_Z+44.69;
-	  //Déclaration des Gain sur X,Y et Z de l'accéléromètre après calibration via la matrice sous Excel
-	  float GainX=-6.025;
-	  float GainY=-6.14;
-	  //calcul angles
-	  float theta=atan((acc.Y*GainY)/(acc.X*GainX));
-	  float psi=atan((-acc_Z)/(sqrt(acc_Y*acc_Y+acc_X*acc_X)));
-	  float delta=acos(sqrt((mag_Y*acc_Z-mag_Z*acc_Y)*(mag_Y*acc_Z-mag_Z*acc_Y)+(mag_Z*acc_X-mag_X*acc_Z)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X))/(sqrt(mag_X*mag_X+mag_Y*mag_Y+mag_Z*mag_Z)*sqrt(acc_X*acc_X+acc_Y*acc_Y+acc_Z*acc_Z)));
-	  //Conversion en radians
-	  //NOTE : 57.3 = (360)/(2*pi)
-	  theta=theta*57.3;
-
-	  //Affichage des toutes les valeurs
-	  printf("accX=%d\t accY=%d\t accZ=%d\t |\t magX=%d\t magY=%d\t magZ=%d",acc.X,acc.Y,acc.Z,mag.X,mag.Y,mag.Z);
-	  printf("\t|||||\t");
-	  printf("accX=%.2f\t accY=%.2f\t accZ=%.2f\t |\t magX=%.2f\t magY=%.2f\t magZ=%.2f",acc_X,acc_Y,acc_Z,mag_X,mag_Y,mag_Z);
-	  printf("\t|||\t");
-	  printf("theta=%.2f\t psi=%.2f\t delta=%.2f",theta,psi,delta);
-	  printf("\n\r");
-
-
-
+	  acc_calibration(&acc,&real_acc);
+	  mag_calibration(&mag);
+	  calcul_angle(&angle,&real_acc,&mag);
+	  affich_meas(&acc,&real_acc,&mag,&angle);
   }
 }
     /* USER CODE END WHILE */
