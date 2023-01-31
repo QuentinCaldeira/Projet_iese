@@ -73,36 +73,36 @@ int __io_putchar(int ch) {
 
 /*---Fonction permettant d'attester la présence du magneto et de l'accelero---*/
 int who_am_i_sensors(){
-	uint8_t buf[1];                                                                                     //Buffer de 1 octet car on ne lit que une case mémoire
-	HAL_StatusTypeDef ret;                                                                              //Variable HAL permettant de voir l'état de la transmission I2C
-	buf[0] = WHO_AM_I_A;                                                                                //On affecte l'adresse de la case mémoire stockant WHOAMI pour l'accelero
-	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                              //On effectue la transmission sur l'accelero
-	if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+	uint8_t buf[1];                                                              //Buffer de 1 octet car on ne lit que une case mémoire
+	HAL_StatusTypeDef ret;                                                       //Variable HAL permettant de voir l'état de la transmission I2C
+	buf[0] = WHO_AM_I_A;                                                         //On affecte l'adresse de la case mémoire stockant WHOAMI pour l'accelero
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);       //On effectue la transmission sur l'accelero
+	if ( ret != HAL_OK ) {                                                       //Si la transmission s'est mal passée, on affiche une erreur
 		printf("Error Tx\r\n");
 	}
 	else {
-	    ret = HAL_I2C_Master_Receive(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);                           //Sinon, on recupere la valeur dans la case memoire
-	    if ( ret != HAL_OK ) {                                                                          //Si la réception s'est mal passée, on affiche une erreur
+	    ret = HAL_I2C_Master_Receive(&hi2c1, ACC_ADR, buf, 1, HAL_MAX_DELAY);     //Sinon, on recupere la valeur dans la case memoire
+	    if ( ret != HAL_OK ) {                                                    //Si la réception s'est mal passée, on affiche une erreur
 	      printf("Error Rx\r\n");
 	    }
 	    else {
-	    	if ( buf[0]==0x33 ) {                                                                         //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
+	    	if ( buf[0]==0x33 ) {                                                 //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
 	        printf("Detection de accelerometre \n\r");
 	    	}
 	    }
   }
-  buf[0] = WHO_AM_I_M;                                                                                //On affecte l'adresse de la case mémoire du WHOAMI pour le magneto
-  ret = HAL_I2C_Master_Transmit(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);                              //On effectue la transmission sur le magneto
-  if ( ret != HAL_OK ) {                                                                              //Si la transmission s'est mal passé, on affiche une erreur
+  buf[0] = WHO_AM_I_M;                                                             //On affecte l'adresse de la case mémoire du WHOAMI pour le magneto
+  ret = HAL_I2C_Master_Transmit(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);           //On effectue la transmission sur le magneto
+  if ( ret != HAL_OK ) {                                                           //Si la transmission s'est mal passée, on affiche une erreur
 	  printf("Error Tx\r\n");
   }
   else {
-  	ret = HAL_I2C_Master_Receive(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);                             //Sinon, on recupere la valeur dans la case memoire
-  	if ( ret != HAL_OK ) {                                                                            //Si la réception s'est mal passée, on affiche une erreur
+  	ret = HAL_I2C_Master_Receive(&hi2c1, MAG_ADR, buf, 1, HAL_MAX_DELAY);          //Sinon, on recupere la valeur dans la case memoire
+  	if ( ret != HAL_OK ) {                                                          //Si la réception s'est mal passée, on affiche une erreur
   	  printf("Error Rx\r\n");
   	}
     else {
-    	if ( buf[0]==0x40 ) {                                                                           //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
+    	if ( buf[0]==0x40 ) {                                                        //On teste si la valeur présente dans la case memoire est identique à celle indiquée dans la doc
     		printf("Detection de magneto \n\r");
     	}
     }
@@ -110,20 +110,20 @@ int who_am_i_sensors(){
 }
 
 int reset_acc(){
-	uint8_t buf[2];
+	uint8_t buf[2];																	//Buffer de 2 octets car on dirige la mémoire puis on écrit une valeur
 	HAL_StatusTypeDef ret;
-	buf[0] = CTRL_REG5_A;  
- 	buf[1]=0x80;  //Data de reset
-	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 2, HAL_MAX_DELAY);
+	buf[0] = CTRL_REG5_A;  															//L'adresse où écrire sera CTRL_REG_5
+ 	buf[1]=0x80;  																	//Data de reset
+	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 2, HAL_MAX_DELAY);			//On teste si la transmission se passe bien
 	if ( ret != HAL_OK ) {
-		printf("Error Tx\r\n");
+		printf("Error Tx\r\n");														//Si elle se passe mal, on met une erreur
 	}
 }
 
 int config_acc(){
 	HAL_StatusTypeDef ret;
-	uint8_t buf[6] ;
-	uint8_t res[6] ;
+	uint8_t buf[6] ;																//Buffer de 6 car on va écrire sur 6 reg d'un coup
+	uint8_t res[6] ;																//Buffer permettant de vérifier si les valeurs ont bien été écrites
 	buf[0]=0x27;//Valeur a mettre dans ctrm_reg_1
 	buf[1]=0x00;//Valeur a mettre dans ctrm_reg_2
 	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_3
@@ -136,6 +136,7 @@ int config_acc(){
 	}
 	ret = HAL_I2C_Mem_Read(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 6, HAL_MAX_DELAY);
 	uint8_t i=0;
+	//Ici on relit les 6 registres pour vérifier que la valeur souhaitée à bien été inscrite
 	for(i=0;i<6;i++){
 		if(buf[i]==res[i]){
 			printf("0x%02x mis dans le registre CTRL_REG_%d_A \n\r", buf[i], i+1);
@@ -158,8 +159,8 @@ int reset_mag(){
 
 int config_mag(){
 	HAL_StatusTypeDef ret;
-	uint8_t buf[6] ;
-	uint8_t res[6] ;
+	uint8_t buf[3] ;															//Buffer de 3 car on va écrire sur 3 reg d'un coup
+	uint8_t res[3] ;															//Buffer permettant de vérifier si les valeurs ont bien été écrites
 	buf[0]=0x0C;//Valeur a mettre dans ctrm_reg_a
 	buf[1]=0x02;//Valeur a mettre dans ctrm_reg_b
 	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_c
@@ -169,6 +170,7 @@ int config_mag(){
 	}
 	ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
 	uint8_t i=0;
+	//Ici on relit les 3 registres pour vérifier que la valeur souhaitée à bien été inscrite
 	for(i=0;i<3;i++){
 		if(buf[i]==res[i]){
 			printf("0x%02x mis dans le registre CTRL_REG_%d_A \n\r", buf[i], i+1);
@@ -182,8 +184,6 @@ int config_mag(){
 void get_data(struct data* acc, struct data* mag){
 		HAL_StatusTypeDef ret;
 		uint8_t buf[6] ;
-		//int16_t acc.X, acc.Y, acc.Z;
-		//int16_t magX, magY, magZ;
 		ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, OUT_X_L_A, I2C_MEMADD_SIZE_8BIT, 0, 0, HAL_MAX_DELAY);
 		if ( ret != HAL_OK ) {
 			printf("Error Tx\r\n");
@@ -201,19 +201,7 @@ void get_data(struct data* acc, struct data* mag){
 		mag->X=(buf[1]<<8)|(buf[0]);
 		mag->Y=(buf[3]<<8)|(buf[2]);
 		mag->Z=(buf[5]<<8)|(buf[4]);
-
-		/*printf("magX=%d  ",magX);
-		printf("magY=%d  ",magY);
-		printf("magZ=%d\n\r",magZ);
-		printf("accX=%d  ",accX);
-		printf("accY=%d  ",accY);
-		printf("accZ=%d\n\r",accZ);*/
 }
-
-void convert_acc(struct data* acc){
-	acc->X=32767/acc->X;
-}
-
 
 /*---------------------------------------------------------------------------------*/
 /* USER CODE END 0 */
@@ -252,11 +240,12 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  who_am_i_sensors();
-  reset_acc();
-  config_acc();
-  reset_mag();
-  config_mag();
+  who_am_i_sensors();//Fonction qui permet dé vérifier la communication avec les capteurs
+  reset_acc();//Fonction qui permet de reset les registres de Acc
+  config_acc();//Fonction qui permet de régler les registres de config de Mag
+  reset_mag();//Fonction qui permet de reset les registres de Acc
+  config_mag();//Fonction qui permet de régler les registres de config de Mag
+  //Définition des structures contenant les 3 axes
   struct data acc;
   struct data mag;
 
@@ -266,26 +255,33 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1){
 	  get_data(&acc,&mag);
-	  //Tentative conversion en float
+	  //Conversion en float pour affichage
+	  //(VAL * FS) / Taille en bits
 	  float acc_Z=(float)acc.Z*4/65535;
 	  float acc_Y=(float)acc.Y*4/65535;
 	  float acc_X=(float)acc.X*4/65535;
-
+	  //Conversion en float pour affichage
+	  //(VAL * FS) / Taille en bits
+	  //100000 car +-50G soit +-50000mG
 	  float mag_Z=(float)mag.Z*100000/65535;
 	  float mag_Y=(float)mag.Y*100000/65535;
-	  float mag_X=(float)mag.X*100000/65535;//Conversion en mGauss
-	//ADJUST OFFSET
+	  float mag_X=(float)mag.X*100000/65535;
+	  //Compensation des offsets du magnetomètre après calcul du centre de gravité sur Excel
 	  mag_X=mag_X-30.64;
 	  mag_Y=mag_Y+3.87;
 	  mag_Z=mag_Z+44.69;
-
-
+	  //Déclaration des Gain sur X,Y et Z de l'accéléromètre après calibration via la matrice sous Excel
+	  float GainX=-6.025;
+	  float GainY=-6.14;
 	  //calcul angles
-	  float theta=atan(acc_Y/acc_X);
+	  float theta=atan((acc.Y*GainY)/(acc.X*GainX));
 	  float psi=atan((-acc_Z)/(sqrt(acc_Y*acc_Y+acc_X*acc_X)));
 	  float delta=acos(sqrt((mag_Y*acc_Z-mag_Z*acc_Y)*(mag_Y*acc_Z-mag_Z*acc_Y)+(mag_Z*acc_X-mag_X*acc_Z)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X)*(mag_Z*acc_X-mag_X*acc_Z)+(mag_X*acc_Y-mag_Y*acc_X))/(sqrt(mag_X*mag_X+mag_Y*mag_Y+mag_Z*mag_Z)*sqrt(acc_X*acc_X+acc_Y*acc_Y+acc_Z*acc_Z)));
+	  //Conversion en radians
+	  //NOTE : 57.3 = (360)/(2*pi)
+	  theta=theta*57.3;
 
-
+	  //Affichage des toutes les valeurs
 	  printf("accX=%d\t accY=%d\t accZ=%d\t |\t magX=%d\t magY=%d\t magZ=%d",acc.X,acc.Y,acc.Z,mag.X,mag.Y,mag.Z);
 	  printf("\t|||||\t");
 	  printf("accX=%.2f\t accY=%.2f\t accZ=%.2f\t |\t magX=%.2f\t magY=%.2f\t magZ=%.2f",acc_X,acc_Y,acc_Z,mag_X,mag_Y,mag_Z);

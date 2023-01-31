@@ -2,10 +2,9 @@
 ../Core/Src/main.c:75:5:who_am_i_sensors	24	static
 ../Core/Src/main.c:112:5:reset_acc	24	static
 ../Core/Src/main.c:123:5:config_acc	40	static
-../Core/Src/main.c:149:5:reset_mag	32	static
-../Core/Src/main.c:159:5:config_mag	40	static
-../Core/Src/main.c:182:6:get_data	40	static
-../Core/Src/main.c:213:6:convert_acc	16	static
-../Core/Src/main.c:225:5:main	144	static
-../Core/Src/main.c:318:6:SystemClock_Config	88	static
-../Core/Src/main.c:369:6:Error_Handler	8	static,ignoring_inline_asm
+../Core/Src/main.c:150:5:reset_mag	32	static
+../Core/Src/main.c:160:5:config_mag	40	static
+../Core/Src/main.c:184:6:get_data	40	static
+../Core/Src/main.c:213:5:main	152	static
+../Core/Src/main.c:306:6:SystemClock_Config	88	static
+../Core/Src/main.c:357:6:Error_Handler	8	static,ignoring_inline_asm
