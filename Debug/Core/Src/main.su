@@ -9,7 +9,7 @@
 ../Core/Src/main.c:241:6:acc_calibration	24	static
 ../Core/Src/main.c:247:6:mag_calibration	16	static
 ../Core/Src/main.c:253:6:calcul_angle	40	static
-../Core/Src/main.c:264:6:affich_meas	56	static
-../Core/Src/main.c:281:5:main	56	static
-../Core/Src/main.c:344:6:SystemClock_Config	88	static
-../Core/Src/main.c:395:6:Error_Handler	8	static,ignoring_inline_asm
+../Core/Src/main.c:263:6:affich_meas	56	static
+../Core/Src/main.c:280:5:main	56	static
+../Core/Src/main.c:343:6:SystemClock_Config	88	static
+../Core/Src/main.c:394:6:Error_Handler	8	static,ignoring_inline_asm

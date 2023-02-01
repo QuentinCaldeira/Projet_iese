@@ -196,7 +196,7 @@ int config_mag(){
 	HAL_StatusTypeDef ret;
 	uint8_t buf[3] ;															//Buffer de 3 car on va écrire sur 3 reg d'un coup
 	uint8_t res[3] ;															//Buffer permettant de vérifier si les valeurs ont bien été écrites
-	buf[0]=0x8C;//Valeur a mettre dans ctrm_reg_a
+	buf[0]=0x80;//Valeur a mettre dans ctrm_reg_a
 	buf[1]=0x02;//Valeur a mettre dans ctrm_reg_b
 	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_c
 	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
@@ -257,18 +257,17 @@ void calcul_angle(struct angle* angle, struct data_real* acc, struct data_meas* 
 	//Conversion en radians
 	//NOTE : 57.3 = (360)/(2*pi)
 	angle->theta=angle->theta*57.3;
-	if((acc->X<0.06))angle->theta=0;
 	angle->psi=angle->psi*57.3;
 	angle->delta=angle->delta*57.3;
 }
 void affich_meas(struct data_meas* acc,struct data_real* real_acc,struct data_meas* mag,struct angle* angle){
 	//Affichage des toutes les valeurs
-	printf("accX=%d\t accY=%d\t accZ=%d\t |\t magX=%d\t magY=%d\t magZ=%d",acc->X,acc->Y,acc->Z,mag->X,mag->Y,mag->Z);
+	printf("accX=%5d\t accY=%5d\t accZ=%5d\t |\t magX=%5d\t magY=%5d\t magZ=%5d",acc->X,acc->Y,acc->Z,mag->X,mag->Y,mag->Z);
 	printf("\t|||||\t");
 	printf("accX=%.2f\t accY=%.2f\t accZ=%.2f",real_acc->X,real_acc->Y,real_acc->Z);
 	printf("\t|||\t");
 	printf("theta=%.2f\t psi=%.2f\t delta=%.2f",angle->theta,angle->psi,angle->delta);
-	printf("\n\r");
+	printf("\r");
 }
 
 /*---------------------------------------------------------------------------------*/
