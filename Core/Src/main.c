@@ -23,27 +23,17 @@
 /* USER CODE BEGIN PD */
 #define ACC_ADR 		0x32 //Adresse i2c de l'acceloremetre
 #define MAG_ADR 		0x3C //Adresse i2c du magnetometre
-#define WHO_AM_I_A 		0x0F
-#define WHO_AM_I_M		0x4F
+#define WHO_AM_I_A 		0x0F//Adresse contenant le WHOAMI de ACC
+#define WHO_AM_I_M		0x4F//Adresse contenant le WHOAMI de MAG
 
+#define CTRL_REG1_A 	0x20//Valeur contenant le premier registre de controle de ACC. Les autres ne sont pas nécessaires car nous allons faire une écriture multiple
+#define CTRL_REG5_A 	0x24//Valeur contenant le registre 5 de controle de ACC, permettant le REBOOT
+#define OUT_X_L_A		0x28//Valeur contenant le registre de sortie des valeurs de ACC
 
-#define CTRL_REG1_A 	0x20
-#define CTRL_REG5_A 	0x24
-#define OUT_X_L_A		0x28
+#define CTRL_REG_A_M 	0x60//Valeur contenant le premier registre de controle de MAG. Les autres ne sont pas nécessaires car nous allons faire une écriture multiple
+#define	OUTX_L_REG_M	0x68//Valeur contenant registre de sortie des valeurs de MAG
 
-#define CFG_REG_A_M 	0x60
-#define	OUTX_L_REG_M	0x68
-
-#define SUB_INCREMENT   0x80//Masque pour autoriser l'incrément des sous registres
-
-#define CTRL_REG_A_M 	0x60
-
-#ifdef __GNUC__
-#define GETCHAR_PROTOTYPE int __io_getchar(void)
-#else
-#define GETCHAR_PROTOTYPE int fgetc(FILE *f)
-#endif
-
+#define SUB_INCREMENT   0x80//Masque pour autoriser l'incrément des sous registres (écriture multiple)
 
 /* USER CODE END PD */
 
@@ -55,18 +45,21 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+//structure contenant les axes en INT
 struct data_meas {
   int16_t X;
   int16_t Y;
   int16_t Z;
 };
 
+//structure contenant les axes en FLOAT
 struct data_real {
   float X;
   float Y;
   float Z;
 };
 
+//structure contenant les angles en FLOAT
 struct angle {
   float theta;
   float psi;
@@ -84,25 +77,12 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 /*------------Fonction permettant de relier le printf et l'uart---------------*/
 int __io_putchar(int ch) {
 	uint8_t c = ch & 0x00FF;
 	HAL_UART_Transmit(&huart2, &c, 1, 10);
 	return ch;
-}
-
-GETCHAR_PROTOTYPE
-{
-  uint8_t ch = 0;
-
-  /* Clear the Overrun flag just before receiving the first character */
-  __HAL_UART_CLEAR_OREFLAG(&huart2);
-
-  /* Wait for reception of a character on the USART RX line and echo this
-   * character on console */
-  HAL_UART_Receive(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-  return ch;
 }
 /*----------------------------------------------------------------------------*/
 
@@ -148,7 +128,7 @@ int reset_acc(){
 	uint8_t buf[2];																	//Buffer de 2 octets car on dirige la mémoire puis on écrit une valeur
 	HAL_StatusTypeDef ret;
 	buf[0] = CTRL_REG5_A;  															//L'adresse où écrire sera CTRL_REG_5
- 	buf[1]=0x80;  																	//Data de reset
+ 	buf[1]=0x80;  																	//Data de reset, 1 logique sur BOOT
 	ret = HAL_I2C_Master_Transmit(&hi2c1, ACC_ADR, buf, 2, HAL_MAX_DELAY);			//On teste si la transmission se passe bien
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");														//Si elle se passe mal, on met une erreur
@@ -159,13 +139,14 @@ int config_acc(){
 	HAL_StatusTypeDef ret;
 	uint8_t buf[6] ;																//Buffer de 6 car on va écrire sur 6 reg d'un coup
 	uint8_t res[6] ;																//Buffer permettant de vérifier si les valeurs ont bien été écrites
-	buf[0]=0x27;//Valeur a mettre dans ctrm_reg_1
-	buf[1]=0x00;//Valeur a mettre dans ctrm_reg_2
-	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_3
-	buf[3]=0x00;//Valeur a mettre dans ctrm_reg_4
+	buf[0]=0x27;//ODR=10Hz, Axe X Y et Z actifs
+	buf[1]=0x00;//Pas de filtres
+	buf[2]=0x00;//Pas d'interruptions
+	buf[3]=0x00;//FS=+/-2g, SPI disabled
 	buf[4]=0x00;//Valeur a mettre dans ctrm_reg_5
-	buf[5]=0x00;//Valeur a mettre dans ctrm_reg_6
+	buf[5]=0x00;//Pas d'interruptions
 	ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, CTRL_REG1_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);
+	//NOTE : SUB_INCREMENT permet d'autoriser l'incrémentation des registres en cas d'écriture multiple
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
 	}
@@ -185,7 +166,7 @@ int config_acc(){
 int reset_mag(){
 	uint8_t buf[1];
 	HAL_StatusTypeDef ret;
-	buf[0] = 0x60;//1 sur reboot
+	buf[0] = 0x60;//1 sur reboot et SOFT_RST
 	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CTRL_REG_A_M, I2C_MEMADD_SIZE_8BIT, buf, 1, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
@@ -196,9 +177,9 @@ int config_mag(){
 	HAL_StatusTypeDef ret;
 	uint8_t buf[3] ;															//Buffer de 3 car on va écrire sur 3 reg d'un coup
 	uint8_t res[3] ;															//Buffer permettant de vérifier si les valeurs ont bien été écrites
-	buf[0]=0x80;//Valeur a mettre dans ctrm_reg_a
-	buf[1]=0x02;//Valeur a mettre dans ctrm_reg_b
-	buf[2]=0x00;//Valeur a mettre dans ctrm_reg_c
+	buf[0]=0x80;//Activation de la compensation de température, ODR=10Hz
+	buf[1]=0x02;//Activation de offset cancellation
+	buf[2]=0x00;//Pas de désactivation de I2C, pas d'interruption
 	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
@@ -219,38 +200,42 @@ int config_mag(){
 void get_data(struct data_meas* acc, struct data_meas* mag){
 		HAL_StatusTypeDef ret;
 		uint8_t buf[6] ;
-		ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, OUT_X_L_A, I2C_MEMADD_SIZE_8BIT, 0, 0, HAL_MAX_DELAY);
+		ret = HAL_I2C_Mem_Write(&hi2c1, ACC_ADR, OUT_X_L_A, I2C_MEMADD_SIZE_8BIT, 0, 0, HAL_MAX_DELAY);//On va dans le registre contenant la sortie de ACC
 		if ( ret != HAL_OK ) {
 			printf("Error Tx\r\n");
 		}
-		ret = HAL_I2C_Mem_Read(&hi2c1, ACC_ADR, OUT_X_L_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);
-		acc->X=(buf[1]<<8)|(buf[0]);
-		acc->Y=(buf[3]<<8)|(buf[2]);
-		acc->Z=(buf[5]<<8)|(buf[4]);
+		ret = HAL_I2C_Mem_Read(&hi2c1, ACC_ADR, OUT_X_L_A|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);//On lit les 6 registres contenant X,Y et Z
+		acc->X=(buf[1]<<8)|(buf[0]);//Les deux premiers registres lus sont l'axe X. Le 1er reg est celui de poids faible, le 2nd est celui de poids fort
+		acc->Y=(buf[3]<<8)|(buf[2]);//Les deux suivants sont l'axe Y. Le 1er reg est celui de poids faible, le 2nd est celui de poids fort
+		acc->Z=(buf[5]<<8)|(buf[4]);//Les deux suivants sont l'axe Z. Le 1er reg est celui de poids faible, le 2nd est celui de poids fort
 
 		ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, OUTX_L_REG_M, I2C_MEMADD_SIZE_8BIT, 0, 0, HAL_MAX_DELAY);
 		if ( ret != HAL_OK ) {
 			printf("Error Tx\r\n");
 		}
-		ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, OUTX_L_REG_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);
-		mag->X=(buf[1]<<8)|(buf[0]);
-		mag->Y=(buf[3]<<8)|(buf[2]);
-		mag->Z=(buf[5]<<8)|(buf[4]);
+		ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, OUTX_L_REG_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 6, HAL_MAX_DELAY);//On va dans le registre contenant la sortie de MAG
+		mag->X=(buf[1]<<8)|(buf[0]);//Les deux premiers registres lus sont l'axe X. Le 1er reg est celui de poids faible, le 2nd est celui de poids fort
+		mag->Y=(buf[3]<<8)|(buf[2]);//Les deux suivants sont l'axe Y. Le 1er reg est celui de poids faible, le 2nd est celui de poids fort
+		mag->Z=(buf[5]<<8)|(buf[4]);//Les deux suivants sont l'axe Z. Le 1er reg est celui de poids faible, le 2nd est celui de poids fort
 }
 
 void acc_calibration(struct data_meas* acc, struct data_real* real_acc){
+	//Cette fonction permet de corriger les valeurs de l'ACC. Les coefficients écrits ont été calculés à partir du tableur Excel, voir PJ
 	real_acc->X=-6.025*pow(10,-5)*(acc->X+1152)+1.075*pow(10,-7)*(acc->Y-1055)+1.387*pow(10,-6)*(acc->Z-1504);
 	real_acc->Y=1.299*pow(10,-6)*(acc->X+1152)-6.14*pow(10,-5)*(acc->Y-1055)+8.793*pow(10,-8)*(acc->Z-1504);
 	real_acc->Z=-1.378*pow(10,-6)*(acc->X+1152)+4.689*pow(10,-7)*(acc->Y-1055)-6.001*pow(10,-5)*(acc->Z-1504);
 }
 
 void mag_calibration(struct data_meas* mag){
+	//Cette fonction permet de corriger les valeurs de MAG. Les coefficients écrits ont été calculés à partir d'un tableau Excel
 	  mag->X=mag->X-46;
 	  mag->Y=mag->Y-88;
 	  mag->Z=mag->Z-12;
 }
 
 void calcul_angle(struct angle* angle, struct data_real* acc, struct data_meas* mag){
+	//Cette fonction calcule les 3 angles selon les formules données dans le poly
+	//ATTENTION, atan retourne une valeur en RADIANS
 	angle->theta=atan((acc->Y)/(acc->X));
 	angle->psi=atan((-acc->Z)/(sqrt(acc->Y*acc->Y+acc->X*acc->X)));
 	angle->delta=acos(sqrt(pow((mag->Y*acc->Z-mag->Z*acc->Y),2)+pow((mag->Z*acc->X-mag->X*acc->Z),2)+pow((mag->X*acc->Y-mag->Y*acc->X),2)+(mag->X*acc->Y-mag->Y*acc->Z))/(sqrt(mag->X*mag->X+mag->Y*mag->Y+mag->Z*mag->Z)*sqrt(acc->Z*acc->X+acc->Y*acc->Y+acc->Z*acc->Z)));
@@ -312,22 +297,22 @@ int main(void)
   config_acc();//Fonction qui permet de régler les registres de config de Mag
   reset_mag();//Fonction qui permet de reset les registres de Acc
   config_mag();//Fonction qui permet de régler les registres de config de Mag
-  //Définition des structures contenant les 3 axes
-  struct data_meas acc;
-  struct data_meas mag;
-  struct data_real real_acc;
-  struct angle angle;
+
+  struct data_meas acc;//Structure pour la valeur brute (int) de l'ACC
+  struct data_meas mag;//Structure pour la valeur brute (int) et corrigée (int) de MAG
+  struct data_real real_acc;//Structure pour la valeur corrigée de ACC (float)
+  struct angle angle;//Structure pour la valeur des angles (float)
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1){
-	  get_data(&acc,&mag);
-	  acc_calibration(&acc,&real_acc);
-	  mag_calibration(&mag);
-	  calcul_angle(&angle,&real_acc,&mag);
-	  affich_meas(&acc,&real_acc,&mag,&angle);
+	  get_data(&acc,&mag);//Cette fonction permet d'acquérir les données
+	  acc_calibration(&acc,&real_acc);//Cette fonction corrige les valeurs de ACC
+	  mag_calibration(&mag);//Cette fonction corrige les valeurs de MAG
+	  calcul_angle(&angle,&real_acc,&mag);//Cette fonction retourne les angles calculés
+	  affich_meas(&acc,&real_acc,&mag,&angle);//Cette fonction affiche les angles
   }
 }
     /* USER CODE END WHILE */
