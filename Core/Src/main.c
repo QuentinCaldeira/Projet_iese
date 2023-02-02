@@ -180,11 +180,11 @@ int config_mag(){
 	buf[0]=0x80;//Activation de la compensation de température, ODR=10Hz
 	buf[1]=0x02;//Activation de offset cancellation
 	buf[2]=0x00;//Pas de désactivation de I2C, pas d'interruption
-	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
+	ret = HAL_I2C_Mem_Write(&hi2c1, MAG_ADR, CTRL_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, buf, 3, HAL_MAX_DELAY);
 	if ( ret != HAL_OK ) {
 		printf("Error Tx\r\n");
 	}
-	ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, CFG_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
+	ret = HAL_I2C_Mem_Read(&hi2c1, MAG_ADR, CTRL_REG_A_M|SUB_INCREMENT, I2C_MEMADD_SIZE_8BIT, res, 3, HAL_MAX_DELAY);
 	uint8_t i=0;
 	//Ici on relit les 3 registres pour vérifier que la valeur souhaitée à bien été inscrite
 	for(i=0;i<3;i++){
@@ -238,7 +238,7 @@ void calcul_angle(struct angle* angle, struct data_real* acc, struct data_meas* 
 	//ATTENTION, atan retourne une valeur en RADIANS
 	angle->theta=atan((acc->Y)/(acc->X));
 	angle->psi=atan((-acc->Z)/(sqrt(acc->Y*acc->Y+acc->X*acc->X)));
-	angle->delta=acos(sqrt(pow((mag->Y*acc->Z-mag->Z*acc->Y),2)+pow((mag->Z*acc->X-mag->X*acc->Z),2)+pow((mag->X*acc->Y-mag->Y*acc->X),2)+(mag->X*acc->Y-mag->Y*acc->Z))/(sqrt(mag->X*mag->X+mag->Y*mag->Y+mag->Z*mag->Z)*sqrt(acc->Z*acc->X+acc->Y*acc->Y+acc->Z*acc->Z)));
+	angle->delta=acos(sqrt(pow((mag->Y*acc->Z-mag->Z*acc->Y),2)+pow((mag->Z*acc->X-mag->X*acc->Z),2)+pow((mag->X*acc->Y-mag->Y*acc->X),2)+(mag->X*acc->Y-mag->Y*acc->Z))/(sqrt(mag->X*mag->X+mag->Y*mag->Y+mag->Z*mag->Z)*sqrt(acc->X*acc->X+acc->Y*acc->Y+acc->Z*acc->Z)));
 	//Conversion en radians
 	//NOTE : 57.3 = (360)/(2*pi)
 	angle->theta=angle->theta*57.3;
