@@ -238,21 +238,23 @@ void calcul_angle(struct angle* angle, struct data_real* acc, struct data_meas* 
 	//ATTENTION, atan retourne une valeur en RADIANS
 	angle->theta=atan((acc->Y)/(acc->X));
 	angle->psi=atan((-acc->Z)/(sqrt(acc->Y*acc->Y+acc->X*acc->X)));
-	angle->delta=acos(sqrt(pow((mag->Y*acc->Z-mag->Z*acc->Y),2)+pow((mag->Z*acc->X-mag->X*acc->Z),2)+pow((mag->X*acc->Y-mag->Y*acc->X),2)+(mag->X*acc->Y-mag->Y*acc->Z))/(sqrt(mag->X*mag->X+mag->Y*mag->Y+mag->Z*mag->Z)*sqrt(acc->X*acc->X+acc->Y*acc->Y+acc->Z*acc->Z)));
-	//Conversion en radians
+	angle->delta=acos(sqrt(pow((mag->Y*acc->Z-mag->Z*acc->Y),2)+pow((mag->Z*acc->X-mag->X*acc->Z),2)+pow((mag->X*acc->Y-mag->Y*acc->X),2))/(sqrt(mag->X*mag->X+mag->Y*mag->Y+mag->Z*mag->Z)*sqrt(acc->X*acc->X+acc->Y*acc->Y+acc->Z*acc->Z)));
+	angle->phi=atan((mag->X*sin(angle->theta)-mag->Y*cos(angle->theta))/(mag->Z*cos(angle->psi)+mag->Y*sin(angle->theta)*sin(angle->psi)+mag->X*cos(angle->theta)*sin(angle->psi)));
+	//Conversion en degrés
 	//NOTE : 57.3 = (360)/(2*pi)
 	angle->theta=angle->theta*57.3;
 	angle->psi=angle->psi*57.3;
 	angle->delta=angle->delta*57.3;
+	angle->phi=angle->phi*57.3;
 }
 void affich_meas(struct data_meas* acc,struct data_real* real_acc,struct data_meas* mag,struct angle* angle){
 	//Affichage des toutes les valeurs
-	printf("accX=%5d\t accY=%5d\t accZ=%5d\t |\t magX=%5d\t magY=%5d\t magZ=%5d",acc->X,acc->Y,acc->Z,mag->X,mag->Y,mag->Z);
-	printf("\t|||||\t");
-	printf("accX=%.2f\t accY=%.2f\t accZ=%.2f",real_acc->X,real_acc->Y,real_acc->Z);
-	printf("\t|||\t");
-	printf("theta=%.2f\t psi=%.2f\t delta=%.2f",angle->theta,angle->psi,angle->delta);
-	printf("\r");
+	printf("Acceleration (reelles)\r\n");
+	printf("accX=%.2f\t accY=%.2f\t accZ=%.2f\r\n",real_acc->X,real_acc->Y,real_acc->Z);
+	printf("Magnetometre (brutes calibrees)\r\n");
+	printf("magX=%5d\t magY=%5d\t magZ=%5d\r\n",mag->X,mag->Y,mag->Z);
+	printf("Angles\r\n");
+	printf("theta=%.2f\t psi=%.2f\t delta=%.2f\t phi=%.2f\r \033[0;0H",angle->theta,angle->psi,angle->delta,angle->phi);
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -307,6 +309,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  printf("\033[2J");//CLEAR TERMINAL SCREEN
   while (1){
 	  get_data(&acc,&mag);//Cette fonction permet d'acquérir les données
 	  acc_calibration(&acc,&real_acc);//Cette fonction corrige les valeurs de ACC
