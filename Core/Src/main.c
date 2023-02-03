@@ -248,7 +248,7 @@ void calcul_angle(struct angle* angle, struct data_real* acc, struct data_meas* 
 	angle->phi=angle->phi*57.3;
 }
 void affich_meas(struct data_meas* acc,struct data_real* real_acc,struct data_meas* mag,struct angle* angle){
-	//Affichage des toutes les valeurs
+	//Affichage de toutes les valeurs
 	printf("Acceleration (reelles)\r\n");
 	printf("accX=%.2f\t accY=%.2f\t accZ=%.2f\r\n",real_acc->X,real_acc->Y,real_acc->Z);
 	printf("Magnetometre (brutes calibrees)\r\n");
